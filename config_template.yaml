@@ -1,0 +1,46 @@
+ExpLocation:
+    PreProcess:
+        RawPrefix: /windroot/huang/neuralCF_data/Raw/raw
+        ProcessedDir: /windroot/$USER/rnnSelectionalPreference/trainingSamples/$TYPE_$DATE
+        ProcessedPrefix: /windroot/$USER/rnnSelectionalPreference/trainingSamples/$TYPE_$DATE/processed
+        ProcessedFile: /windroot/$USER/rnnSelectionalPreference/trainingSamples/$TYPE_$DATE_all.txt
+        TempDir: /data/$USER
+        TempPrefix: /data/$USER/output
+    Exp:
+        ExpDir: /windroot/$USER/rnnSelectionalPreference/$TYPE_$DATE
+        DataDir: /windroot/$USER/rnnSelectionalPreference/$TYPE_$DATE/data
+        TrainDir: /windroot/$USER/rnnSelectionalPreference/$TYPE_$DATE/train_$TYPE
+        ResultDir: /windroot/$USER/rnnSelectionalPreference/$TYPE_$DATE/result
+    Visulize:
+        TrainingGraph: /home/$USER/public_html/rnnSelectionalPreference/$TYPE/graph/$TYPE_$DATE.html
+        ResultAnalysis: /home/$USER/public_html/rnnSelectionalPreference/$TYPE/result/overview.html?exp=$DATE
+ExpSetting:
+    sampleType: $TYPE
+    removeHiragana: True
+    onlySimplePredicate: True
+    onlyMultiArg: True
+    targetLast: False
+    placeHolder: True
+    targetCases:
+        - ga
+        - wo
+        - ni
+        - de
+        - wa
+    otherCases:
+        - to
+        - kara
+        - yori
+        - he
+        - made
+        - modif
+        - time
+        - ga2
+    targetPreds:
+        - verb
+        - adj
+        - det
+Scripts:
+    preProcessScript: /home/huang/work/rnnSelectionalPreference/generateSample.py
+DataLocation:
+    SentenceDB_MainCases: /windroot/huang/neuralCF_data/sidSearch/cdbs/pa2sid.cdb
