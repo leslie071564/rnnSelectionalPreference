@@ -158,7 +158,7 @@ class LMSampleGenerator(SampleGenerator):
 
         # create training instances.
         words = sum(args, []) + [pred] 
-        if self.reverseSentence:
+        if self.targetLast:
             words = words[::-1]
         sent = " ".join(words)
 
