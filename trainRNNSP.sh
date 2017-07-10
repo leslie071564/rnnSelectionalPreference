@@ -21,7 +21,7 @@ echo "config file: $config"
 preProcessScript=`cat $config | shyaml get-value Scripts.preProcessScript`
 python $preProcessScript -o ./preProcess.task --config $config --print_task_file
 gxpc js -a work_file=preProcess.task -a cpu_factor=0.5
-#rm -f ./preProcess.task
+rm -f ./preProcess.task
 
 # merge files
 pcdPrefix=`cat $config | shyaml get-value ExpLocation.PreProcess.ProcessedPrefix`

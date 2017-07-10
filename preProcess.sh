@@ -36,5 +36,5 @@ elif [ "$type" = "REP" ] ; then
     $NICE python $preProcessScript --merge_file --config $config --input_file $tmpFile --output_file $pcdFile
 fi
 
-#rm $tmpFile
+rm -f $tmpFile
 echo $fileID done
