@@ -13,8 +13,10 @@ class SampleGenerator(object):
         self.onlySimplePredicate = exp_settings['onlySimplePredicate']
         self.onlyMultiArg = exp_settings['onlyMultiArg']
 
-        self.targetLast = exp_settings['targetLast']
-        self.placeHolder = exp_settings['placeHolder']
+        if exp_settings['sampleFormat'] == 'targetLast':
+            self.targetLast, self.placeHolder = True, False
+        else:
+            self.targetLast, self.placeHolder = False, True
 
         self.targetCases = map(lambda x: cases[x], exp_settings['targetCases'])
         self.targetPreds = map(lambda x: preds[x], exp_settings['targetPreds'])
