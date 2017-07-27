@@ -12,7 +12,7 @@ python make_sample.py print_config "$@" --config $config_file
 # extract training samples from each raw file.
 python make_sample.py print_task --config $config_file --task_file $task_file
 
-#gxpc js -a work_file=preProcess.task -a cpu_factor=0.5
+gxpc js -a work_file=preProcess.task -a cpu_factor=0.5
 rm -f $task_file
 
 # merge and uniq to prepare final sample file.
