@@ -4,11 +4,13 @@ import argparse
 import codecs
 from utils import *
 
-class SampleGenerator(object):
+class PASextractor(object):
     def __init__(self, exp_settings):
         self._set_options(exp_settings)
 
     def _set_options(self, exp_settings):
+        self.type = exp_settings['type']
+
         self.removeHiragana = exp_settings['removeHiragana']
         self.onlySimplePredicate = exp_settings['onlySimplePredicate']
         self.onlyMultiArg = exp_settings['onlyMultiArg']
@@ -74,9 +76,75 @@ class SampleGenerator(object):
         return args
 
 
-class RepStrGenerator(SampleGenerator):
+class SampleGenerator(PASextractor):
     def __init__(self, exp_settings):
-        SampleGenerator.__init__(self, exp_settings)
+        PASextractor.__init__(self, exp_settings)
+
+    def getMTSample(self, line):
+        line = self.processLine(line)
+        if line == None:
+            return []
+        sid, pred, args = line
+
+        # create training instances.
+        training_instances = []
+        for index, arg in enumerate(args):
+            arg, case = arg
+
+            src = sum(args[:index], []) + sum(args[index + 1:], [])
+            src = "%s %s %s" % (" ".join(src), pred, case)
+            src = src.lstrip()
+            tgt = arg
+            training_instances.append([src, tgt])
+
+        return training_instances
+
+    def printSample(self, raw_file, output_file):
+        if self.type == 'MT':
+            self.printMTSample(raw_file, output_file)
+
+        elif self.type == 'LM':
+            self.printLMSample(raw_file, output_file)
+
+    def printMTSample(self, raw_file, output_file):
+        output_file = codecs.open(output_file, 'w', 'utf-8')
+
+        with open(raw_file) as f:
+            for line in f:
+                line = line.decode('euc-jp').rstrip()
+                training_instances = self.getMTSample(line)
+                for src, tgt in training_instances:
+                    output_file.write("%s###%s\n" % (src, tgt))
+
+    def getLMSample(self, line): 
+        line = self.processLine(line)
+        if line == None:
+            return ""
+        sid, pred, args = line
+
+        # create training instances.
+        words = sum(args, []) + [pred] 
+        if self.targetLast:
+            words = words[::-1]
+        sent = " ".join(words)
+
+        return sent
+
+    def printLMSample(self, raw_file, output_file):
+        output_file = codecs.open(output_file, 'w', 'utf-8')
+
+        with open(raw_file) as f:
+            for line in f:
+                line = line.decode('euc-jp').rstrip()
+                training_instances = self.getLMSample(line)
+                if training_instances == "":
+                    continue
+                output_file.write("%s\n" % training_instances)
+
+
+class RepStrGenerator(PASextractor):
+    def __init__(self, exp_settings):
+        PASextractor.__init__(self, exp_settings)
 
     def getRepStr(self, line):
         line = self.processLine(line)
@@ -112,68 +180,4 @@ class RepStrGenerator(SampleGenerator):
                 else:
                     merged_file.write("%s#%s\n" % (nowRepStr, ";".join(sidList)))
                     nowRepStr, sidList = repStr, [sid]
-
-
-class MTSampleGenerator(SampleGenerator):
-    def __init__(self, exp_settings):
-        SampleGenerator.__init__(self, exp_settings)
-
-    def getMTSample(self, line):
-        line = self.processLine(line)
-        if line == None:
-            return []
-        sid, pred, args = line
-
-        # create training instances.
-        training_instances = []
-        for index, arg in enumerate(args):
-            arg, case = arg
-
-            src = sum(args[:index], []) + sum(args[index + 1:], [])
-            src = "%s %s %s" % (" ".join(src), pred, case)
-            src = src.lstrip()
-            tgt = arg
-            training_instances.append([src, tgt])
-
-        return training_instances
-
-    def printMTSample(self, raw_file, output_file):
-        output_file = codecs.open(output_file, 'w', 'utf-8')
-
-        with open(raw_file) as f:
-            for line in f:
-                line = line.decode('euc-jp').rstrip()
-                training_instances = self.getMTSample(line)
-                for src, tgt in training_instances:
-                    output_file.write("%s###%s\n" % (src, tgt))
-
-
-class LMSampleGenerator(SampleGenerator):
-    def __init__(self, exp_settings):
-        SampleGenerator.__init__(self, exp_settings)
-
-    def getLMSample(self, line): 
-        line = self.processLine(line)
-        if line == None:
-            return ""
-        sid, pred, args = line
-
-        # create training instances.
-        words = sum(args, []) + [pred] 
-        if self.targetLast:
-            words = words[::-1]
-        sent = " ".join(words)
-
-        return sent
-
-    def printLMSample(self, raw_file, output_file):
-        output_file = codecs.open(output_file, 'w', 'utf-8')
-
-        with open(raw_file) as f:
-            for line in f:
-                line = line.decode('euc-jp').rstrip()
-                training_instances = self.getLMSample(line)
-                if training_instances == "":
-                    continue
-                output_file.write("%s\n" % training_instances)
 

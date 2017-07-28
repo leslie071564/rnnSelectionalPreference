@@ -2,7 +2,7 @@
 import os
 import sys
 import yaml
-from SampleGenerator import MTSampleGenerator, LMSampleGenerator
+from SampleGenerator import SampleGenerator 
 
 def setArgs(parser):
     parser.add_argument('raw_file', action='store')
@@ -12,13 +12,7 @@ def setArgs(parser):
 def extractSample(options):
     config = yaml.load(open(options.config_file, 'r'))
     exp_settings = config['ExpSetting']
-    sample_type = config['ExpSetting']['type']
 
-    if sample_type == 'MT':
-        mt = MTSampleGenerator(exp_settings)
-        mt.printMTSample(options.raw_file, options.output_file)
-
-    elif sample_type == 'LM':
-        lm = LMSampleGenerator(exp_settings)
-        lm.printLMSample(options.raw_file, options.output_file)
+    generator = SampleGenerator(exp_settings)
+    generator.printSample(options.raw_file, options.output_file)
 
