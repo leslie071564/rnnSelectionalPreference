@@ -56,3 +56,18 @@ def encode_dict(d):
     """
     return "&".join(["%s=%s" % (align, score) for align, score in d.items() if '_' not in align])
 
+
+class SQLtable(object):
+    def __init__(self, c, cols, table_name):
+        self.c = c
+        self.cols = cols
+        self.table_name = table_name
+        self.set_columns()
+
+    def set_columns(self):
+        self.c.execute("CREATE TABLE %s (id TEXT PRIMARY KEY)" % (self.table_name))
+        for col in self.cols:
+            self.c.execute("ALTER TABLE %s ADD COLUMN \'%s\' TEXT" % (self.table_name, col))
+
+    def set_row(self, row_data):
+        self.c.execute("INSERT INTO %s VALUES (\'%s\')" % (self.table_name, "\',\'".join(row_data)))
