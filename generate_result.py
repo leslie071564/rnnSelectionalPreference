@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
+import os
 import sys
 import argparse
-import sqlite3
 from collections import defaultdict
 from itertools import izip
-from getSentence import getEventSentences
-from utils import getPAstr, SQLtable
-pa2sid = "/windroot/huang/neuralCF_data/sidSearch/cdbs/pa2sid.cdb"
 
 
-class knmtFilesProcessor(object):
+class knmtResultExtractor(object):
     def __init__(self, sourceFile, targetFile, outputFile):
         self.saveResult(sourceFile, targetFile, outputFile)
 
@@ -18,56 +15,50 @@ class knmtFilesProcessor(object):
         self._processOutputFile(outputFile)
 
     def _processTestFile(self, sourceFile, targetFile):
-        ret = getEventSentences(pa2sid)
         self.testData = {}
         for index, (src, tgt) in enumerate(izip(open(sourceFile, 'rb'), open(targetFile, 'rb'))):
             src, tgt = src.rstrip().encode('utf-8'), tgt.rstrip().encode('utf-8')
+
             targetArg = tgt
-            args, pred, targetCase = src.split()[:-2], src.split()[-2], src.split()[-1]
+            givenArgs, pred, targetCase = src.split()[:-2], src.split()[-2], src.split()[-1]
 
-            source = "%s ___ %s %s" % (" ".join(args), targetCase, pred)
-
-            iArgs = iter(args)
-            allArgs = [list(x) for x in zip(iArgs, iArgs)] + [[targetArg, targetCase]]
-            paStr = getPAstr(allArgs, pred)
-            sents = ret.event_to_sentence(paStr).values() 
-
-            self.testData[index] = {'src' : source, 'tgtArg': targetArg, 'tgtCase': targetCase, 'sents': sents}
+            self.testData[index] = {'pred': pred, 'givenArgs': givenArgs, 'tgtCase': targetCase, 'tgtArg': targetArg}
             sys.stderr.write("processing test %s\n" % index)
 
     def _processOutputFile(self, outputFile):
         self.bestN = defaultdict(list)
         for line in open(outputFile, 'rb').readlines():
             index, out = line.rstrip().split(' ||| ')
-            index = int(index)
             if "UNK" in out:
                 out = "UNK"
 
-            self.bestN[index].append(out)
+            self.bestN[int(index)].append(out)
 
         self.bestN = dict(self.bestN)
 
-    def writeResultDB(self, db_loc):
-        conn = sqlite3.connect(db_loc)
-        c = conn.cursor()
-        cols = ["source", "target_case", "target_arg", "output", "sents"]
-        table_name = "result"
-        self.resultDB = SQLtable(c, cols, table_name)
+    def writeTask(self, file_loc):
+        f = open(file_loc, 'wb')
 
         for index, testInstance in self.testData.iteritems():
-            result = [str(index)]
-            result.append(testInstance["src"])
+            result = []
+            result.append(testInstance["pred"])
+            result.append(self._formatArgs(testInstance["givenArgs"]))
             result.append(testInstance['tgtCase'])
             result.append(testInstance['tgtArg'])
-            result.append("|".join(self.bestN[index]))
-            result.append("|".join(testInstance['sents']))
-            self.resultDB.set_row(result)
+            result.append('|'.join(self.bestN[index]))
 
-        conn.commit()
-        conn.close()
+            cmd = 'python evaluate.py -r "%s"' % (' '.join(result))
+            f.write(cmd + '\n')
+
+        f.close()
+
+    def _formatArgs(self, args):
+        iArgs = iter(args)
+        argList = ["%s=%s" % (case, arg) for case, arg in zip(iArgs, iArgs)]
+        return "|".join(argList)
 
 
-class rnnlmFilesProcessor(object):
+class rnnlmResultExtractor(object):
     def __init__(self, testFile, outputFile):
         self.saveResult(testFile, outputFile)
 
@@ -76,21 +67,13 @@ class rnnlmFilesProcessor(object):
         self._processOutputFile(outputFile)
 
     def _processTestFile(self, testFile):
-        ret = getEventSentences(pa2sid)
         self.testData = {}
         for index, src in enumerate(open(testFile, 'rb').readlines()):
             src = src.rstrip().encode('utf-8')
             pred, args = src.split()[0], src.split()[1:]
-            targetCase, targetArg = args[-2], args[-1]
+            givenArgs, targetCase, targetArg = args[:-2], args[-2], args[-1]
 
-            source = "%s ___ %s %s" % (" ".join(args[:-2]), targetCase, pred)
-
-            iArgs = iter(args[::-1])
-            allArgs = [list(x) for x in zip(iArgs, iArgs)]
-            paStr = getPAstr(allArgs, pred)
-            sents = ret.event_to_sentence(paStr).values() 
-
-            self.testData[index] = {'src' : source, 'tgtArg': targetArg, 'tgtCase': targetCase, 'sents': sents}
+            self.testData[index] = {'pred' : pred, 'givenArgs': givenArgs, 'tgtCase' : targetCase, 'tgtArg': targetArg}
             sys.stderr.write("processing test %s\n" % index)
 
     def _processOutputFile(self, outputFile):
@@ -104,27 +87,34 @@ class rnnlmFilesProcessor(object):
             out, _ = line.lstrip().split()
             self.bestN[index].append(out)
 
-    def writeResultDB(self, db_loc):
-        conn = sqlite3.connect(db_loc)
-        c = conn.cursor()
-        cols = ["source", "target_case", "target_arg", "output", "sents"]
-        table_name = "result"
-        self.resultDB = SQLtable(c, cols, table_name)
+    def writeTask(self, tmp_folder, file_loc='./generate_result.task'):
+        f = open(file_loc, 'wb')
 
         for index, testInstance in self.testData.iteritems():
-            if index not in self.bestN.keys():
-                sys.stderr.write("%s no output (OOV problem).\n" % index)
-                continue
-            result = [str(index)]
-            result.append(testInstance["src"])
+            result = []
+            result.append(testInstance["pred"])
+            result.append(self._formatArgs(testInstance["givenArgs"]))
             result.append(testInstance['tgtCase'])
             result.append(testInstance['tgtArg'])
-            result.append("|".join(self.bestN[index]))
-            result.append("|".join(testInstance['sents']))
-            self.resultDB.set_row(result)
+            if index not in self.bestN.keys():
+                result.append('null')
+            else:
+                result.append('|'.join(self.bestN[index]))
 
-        conn.commit()
-        conn.close()
+            output_dir = "%s/%s" % (tmp_folder, index/100)
+            if not os.path.isdir(output_dir):
+                os.makedirs(output_dir)
+            output_file = "%s/%s.txt" % (output_dir, index)
+
+            cmd = 'python evaluate.py -r "%s" > %s' % (' '.join(result), output_file)
+            f.write(cmd + '\n')
+
+        f.close()
+
+    def _formatArgs(self, args):
+        iArgs = iter(args)
+        argList = ["%s=%s" % (case, arg) for case, arg in zip(iArgs, iArgs)]
+        return "|".join(argList)
 
 
 if __name__ == "__main__":
@@ -139,10 +129,9 @@ if __name__ == "__main__":
     options = parser.parse_args() 
 
     if options.knmt:
-        x = knmtFilesProcessor(options.source_file, options.target_file, options.output_file)
-        x.writeResultDB(options.result_db)
+        x = knmtResultExtractor(options.source_file, options.target_file, options.output_file)
+        x.writeTask(options.result_db)
 
     elif options.rnnlm:
-        x = rnnlmFilesProcessor(options.source_file, options.output_file)
-        x.writeResultDB(options.result_db)
-
+        x = rnnlmResultExtractor(options.source_file, options.output_file)
+        x.writeTask(options.result_db)
