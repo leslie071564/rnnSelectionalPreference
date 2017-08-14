@@ -69,7 +69,7 @@ class rnnlmResultExtractor(object):
     def _processTestFile(self, testFile):
         self.testData = {}
         for index, src in enumerate(open(testFile, 'rb').readlines()):
-            src = src.rstrip().encode('utf-8')
+            src = src.rstrip()
             pred, args = src.split()[0], src.split()[1:]
             givenArgs, targetCase, targetArg = args[:-2], args[-2], args[-1]
 
