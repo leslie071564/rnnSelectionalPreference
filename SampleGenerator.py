@@ -44,7 +44,6 @@ class PASextractor(object):
 
         if self.removeHiragana:
             pred = rmvHiragana(pred)
-        pred = "%s:%s" % (pred, predType)
 
         if self.splitPostfix and '+' in pred:
             pred = " ".join(pred.split('+'))
