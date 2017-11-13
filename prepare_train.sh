@@ -18,12 +18,22 @@ type=`cat $config_file | shyaml get-value ExpSetting.type`
 
 devSize=`cat $config_file | shyaml get-value ExpSetting.devSize`
 testSize=`cat $config_file | shyaml get-value ExpSetting.testSize`
+trainFrac=`cat $config_file | shyaml get-value ExpSetting.trainFraction`
 devNum=$(( devSize + 1 ))
 testNum=$(( devSize + testSize + 1 ))
+trainFrac=$((trainFrac))
 
 # shuffle
 expSampleFile=$expDataDir/all.txt
 shuf $sampleFile --output=$expSampleFile
+
+# take fractions.
+if [ $trainFrac -ne 1 ];then
+    echo "take one out of $trainFrac"
+    tmp=$expDataDir/tmp.txt
+    awk "NR % $trainFrac == 0" $expSampleFile > $tmp
+    mv $tmp $expSampleFile
+fi
 
 # split file
 if [ "$type" = "MT" ] ; then
@@ -42,8 +52,8 @@ if [ "$type" = "MT" ] ; then
     rm -f xx*
 
     # print commands.
-    dataPrefix=$expDataDir/knmt
-    trainPrefix=$expTrainDir/knmt
+    dataPrefix=$expTrainDir/knmt_data
+    trainPrefix=$expTrainDir/knmt_train
 
     cmd="knmt make_data $srcTrain $tgtTrain $dataPrefix --dev_src $srcDev --dev_tgt $tgtDev --test_src $srcTest --test_tgt $tgtTest"
     echo "***** Run the following command to make data for knmt processing:"
