@@ -12,52 +12,48 @@ TARGETCASES = ['main', 'all']
 
 def setArgs(parser):
     parser.add_argument('rawPrefix', action='store')
-    parser.add_argument('sampleFile', action='store')
-    parser.add_argument('-c', '--config', action='store', default='./make_sample_config.yaml', dest='config_file')
-    parser.add_argument('-t', '--tmpPrefix', action='store', dest='tmpPrefix')
-    parser.add_argument('-p', '--parallelPrefix', action='store', dest='parallelPrefix')
+    parser.add_argument('sampleDir', action='store')
+    parser.add_argument('--config', action='store', default='./make_sample_config.yaml', dest='config_file')
+
+    parser.add_argument('-p', '--parallelTmpDir', action='store', default='/data/$USER/tmp_rnnsp', dest='parallelTmpDir')
+    parser.add_argument('-t', '--sampleTmpDir', action='store', default='$sampleDir/tmp', dest='sampleTmpDir')
 
     parser.add_argument('--type', action='store', default='MT', dest='type', choices=TYPES)
     parser.add_argument('--sampleFormat', action='store', default='targetLast', dest='sampleFormat', choices=FORMATS)
     parser.add_argument('--targetCases', action='store', default='main', dest='targetCases', choices=TARGETCASES)
 
-    parser.add_argument('--removeHiragana', action='store_false', dest='removeHiragana')
-    parser.add_argument('--onlySimplePredicate', action='store_false', dest='onlySimplePredicate')
-    parser.add_argument('--onlyMultiArg', action='store_false', dest='onlyMultiArg')
+    parser.add_argument('--removeHiragana', action='store_true', dest='removeHiragana')
+    parser.add_argument('--includePostfix', action='store_true', dest='includePostfix')
+    parser.add_argument('--splitPostfix', action='store_true', dest='splitPostfix')
+    parser.add_argument('--includeTense', action='store_true', dest='includeTense')
+    parser.add_argument('--onlyMultiArg', action='store_true', dest='onlyMultiArg')
 
 
-def writeConfig(options):
+def get_write_config_options(options):
     # apply default settings
-    sampleDir, sampleFilePrefix = os.path.dirname(options.sampleFile), os.path.basename(options.sampleFile).split('.')[0]
-
-    if options.parallelPrefix is None:
-        options.parallelPrefix = "/data/%s/%s/tmp" %  (getpass.getuser(), sampleFilePrefix)
-
-    if options.tmpPrefix == None:
-        options.tmpPrefix = "%s/%s/tmp" % (sampleDir, sampleFilePrefix)
-
-    """
-    # mkdir?
-    parallelDir = os.path.dirname(options.parallelPrefix)
-    tmpDir = os.path.dirname(options.tmpPrefix)
-    os.mkdir(parallelDir)
-    os.mkdir(tmpDir)
-    """
-
-    dataLocs = dict((arg, getattr(options, arg)) for arg in ['rawPrefix', 'sampleFile', 'parallelPrefix', 'tmpPrefix'])
+    options.parallelTmpDir = options.parallelTmpDir.replace('$USER', getpass.getuser())
+    options.sampleTmpDir = options.sampleTmpDir.replace('$sampleDir', options.sampleDir)
 
     # experimental settings.
     if options.targetCases == 'main':
         options.targetCases = ['ga', 'wo', 'ni', 'de', 'wa']
     else:
         options.targetCases = EngCases
-
     options.targetPreds = EngPreds
 
-    expSettings = dict((arg, getattr(options, arg)) for arg in ['type', 'sampleFormat', 'targetCases', 'targetPreds', 'removeHiragana', 'onlySimplePredicate', 'onlyMultiArg'])
+    return options
 
-    # all args
+
+def writeConfig(options):
+    options = get_write_config_options(options)
+
+    # build config_file hierarchy.
+    dataLocs = dict((arg, getattr(options, arg)) for arg in ['rawPrefix', 'sampleDir', 'parallelTmpDir', 'sampleTmpDir'])
+    expSettings = dict((arg, getattr(options, arg)) for arg in ['type', 'sampleFormat', 'targetCases', 'targetPreds', 'removeHiragana', 'includePostfix', 'splitPostfix', 'includeTense', 'onlyMultiArg'])
+
     allArgs = {'ExpLocation' : dataLocs, 'ExpSetting' : expSettings}
+
+    # write config_file
     with open(options.config_file, 'w') as f:
         yaml.dump(allArgs, f, default_flow_style=False)
 

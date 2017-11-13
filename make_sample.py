@@ -22,8 +22,6 @@ def main():
     sample_parser = subparsers.add_parser('extract_sample')
     extract_sample.setArgs(sample_parser)
 
-    # merge file
-
     options = parser.parse_args()
 
     if options.subtask == 'print_config':
