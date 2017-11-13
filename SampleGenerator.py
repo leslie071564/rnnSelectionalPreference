@@ -12,7 +12,9 @@ class PASextractor(object):
         self.type = exp_settings['type']
 
         self.removeHiragana = exp_settings['removeHiragana']
-        self.onlySimplePredicate = exp_settings['onlySimplePredicate']
+        self.includePostfix = exp_settings['includePostfix']
+        self.splitPostfix = exp_settings['splitPostfix']
+        self.includeTense = exp_settings['includeTense']
         self.onlyMultiArg = exp_settings['onlyMultiArg']
 
         if exp_settings['sampleFormat'] == 'targetLast':
@@ -44,17 +46,22 @@ class PASextractor(object):
             pred = rmvHiragana(pred)
         pred = "%s:%s" % (pred, predType)
 
+        if self.splitPostfix and '+' in pred:
+            pred = " ".join(pred.split('+'))
         return pred
 
     def isValidPredicate(self, pred, predType):
         if predType not in self.targetPreds:
             return False
 
-        if self.onlySimplePredicate:
-            if '+' in pred or '~' in pred:
-                return False
-            elif isNumberPredicate(pred):
-                return False
+        if not self.includePostfix and '+' in pred: 
+            return False
+
+        elif not self.includeTense and '~' in pred:
+            return False
+
+        elif isNumberPredicate(pred):
+            return False
 
         return True
 
@@ -67,6 +74,7 @@ class PASextractor(object):
         args = filter(lambda x: x[1] in self.targetCases, args)
         if args == []:
             return None
+
         if self.onlyMultiArg and len(args) == 1:
             return None
 
