@@ -17,7 +17,7 @@ class knmtResultExtractor(object):
     def _processTestFile(self, sourceFile, targetFile):
         self.testData = {}
         for index, (src, tgt) in enumerate(izip(open(sourceFile, 'rb'), open(targetFile, 'rb'))):
-            src, tgt = src.rstrip().encode('utf-8'), tgt.rstrip().encode('utf-8')
+            src, tgt = src.rstrip(), tgt.rstrip()
 
             targetArg = tgt
             givenArgs, pred, targetCase = src.split()[:-2], src.split()[-2], src.split()[-1]
@@ -36,7 +36,7 @@ class knmtResultExtractor(object):
 
         self.bestN = dict(self.bestN)
 
-    def writeTask(self, file_loc):
+    def writeTask(self, tmp_folder, file_loc='./generate_result.task'):
         f = open(file_loc, 'wb')
 
         for index, testInstance in self.testData.iteritems():
@@ -45,18 +45,25 @@ class knmtResultExtractor(object):
             result.append(self._formatArgs(testInstance["givenArgs"]))
             result.append(testInstance['tgtCase'])
             result.append(testInstance['tgtArg'])
-            result.append('|'.join(self.bestN[index]))
+            if index not in self.bestN.keys():
+                result.append('null')
+            else:
+                result.append('|'.join(self.bestN[index]))
 
-            cmd = 'python evaluate.py -r "%s"' % (' '.join(result))
+            output_dir = "%s/%s" % (tmp_folder, index/100)
+            if not os.path.isdir(output_dir):
+                os.makedirs(output_dir)
+            output_file = "%s/%s.txt" % (output_dir, index)
+
+            cmd = 'python evaluate.py -r "%s" > %s' % (' '.join(result), output_file)
             f.write(cmd + '\n')
 
         f.close()
 
     def _formatArgs(self, args):
         iArgs = iter(args)
-        argList = ["%s=%s" % (case, arg) for case, arg in zip(iArgs, iArgs)]
+        argList = ["%s=%s" % (case, arg) for arg, case in zip(iArgs, iArgs)]
         return "|".join(argList)
-
 
 class rnnlmResultExtractor(object):
     def __init__(self, testFile, outputFile):
