@@ -6,24 +6,7 @@ from utils import *
 
 class PASextractor(object):
     def __init__(self, exp_settings):
-        self._set_options(exp_settings)
-
-    def _set_options(self, exp_settings):
-        self.type = exp_settings['type']
-
-        self.removeHiragana = exp_settings['removeHiragana']
-        self.includePostfix = exp_settings['includePostfix']
-        self.splitPostfix = exp_settings['splitPostfix']
-        self.includeTense = exp_settings['includeTense']
-        self.onlyMultiArg = exp_settings['onlyMultiArg']
-
-        if exp_settings['sampleFormat'] == 'targetLast':
-            self.targetLast, self.placeHolder = True, False
-        else:
-            self.targetLast, self.placeHolder = False, True
-
-        self.targetCases = map(lambda x: cases[x], exp_settings['targetCases'])
-        self.targetPreds = map(lambda x: preds[x], exp_settings['targetPreds'])
+        self.config = exp_settings
 
     def processLine(self, line):
         line = line.split()
@@ -42,21 +25,21 @@ class PASextractor(object):
         if not self.isValidPredicate(pred, predType):
             return None
 
-        if self.removeHiragana:
+        if self.config.removeHiragana:
             pred = rmvHiragana(pred)
 
-        if self.splitPostfix and '+' in pred:
+        if self.config.splitPostfix and '+' in pred:
             pred = " ".join(pred.split('+'))
         return pred
 
     def isValidPredicate(self, pred, predType):
-        if predType not in self.targetPreds:
+        if predType not in self.config.targetPreds:
             return False
 
-        if not self.includePostfix and '+' in pred: 
+        if not self.config.includePostfix and '+' in pred: 
             return False
 
-        elif not self.includeTense and '~' in pred:
+        elif not self.config.includeTense and '~' in pred:
             return False
 
         elif isNumberPredicate(pred):
@@ -70,14 +53,14 @@ class PASextractor(object):
         except ValueError:
             return None
 
-        args = filter(lambda x: x[1] in self.targetCases, args)
+        args = filter(lambda x: x[1] in self.config.targetCases, args)
         if args == []:
             return None
 
-        if self.onlyMultiArg and len(args) == 1:
+        if self.config.onlyMultiArg and len(args) == 1:
             return None
 
-        if self.removeHiragana:
+        if self.config.removeHiragana:
             args = map(lambda x: [rmvHiragana(x[0]), x[1]], args)
 
         return args
@@ -107,10 +90,10 @@ class SampleGenerator(PASextractor):
         return training_instances
 
     def printSample(self, raw_file, output_file):
-        if self.type == 'MT':
+        if self.config.type == 'MT':
             self.printMTSample(raw_file, output_file)
 
-        elif self.type == 'LM':
+        elif self.config.type == 'LM':
             self.printLMSample(raw_file, output_file)
 
     def printMTSample(self, raw_file, output_file):
@@ -131,7 +114,7 @@ class SampleGenerator(PASextractor):
 
         # create training instances.
         words = sum(args, []) + [pred] 
-        if self.targetLast:
+        if self.config.targetLast:
             words = words[::-1]
         sent = " ".join(words)
 
