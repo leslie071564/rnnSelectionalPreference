@@ -20,7 +20,22 @@ class knmtResultExtractor(object):
             src, tgt = src.rstrip(), tgt.rstrip()
 
             targetArg = tgt
-            givenArgs, pred, targetCase = src.split()[:-2], src.split()[-2], src.split()[-1]
+            targetCase = src.split()[-1]
+            givenArgs = []
+            for i, e in enumerate(src.split()[:-1]):
+                if i % 2 == 0:
+                    prev_e = e
+                    continue
+
+                if e in [x.encode('utf-8') for x in [u'ガ', u"ヲ", u"ニ", u"デ", u"未"]]:
+                    givenArgs += [prev_e, e]
+                else:
+                    i -= 1
+                    break
+
+            pred = "+".join(src.split()[i:-1])
+
+            #givenArgs, pred, targetCase = src.split()[:-2], src.split()[-2], src.split()[-1]
 
             self.testData[index] = {'pred': pred, 'givenArgs': givenArgs, 'tgtCase': targetCase, 'tgtArg': targetArg}
             sys.stderr.write("processing test %s\n" % index)
