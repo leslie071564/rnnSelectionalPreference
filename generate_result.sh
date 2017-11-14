@@ -12,7 +12,7 @@ type=`cat $config_file | shyaml get-value ExpSetting.type`
 if [ "$type" = "MT" ] ; then
     test_source_file=$expDataDir/source_test.txt
     test_target_file=$expDataDir/target_test.txt
-    output_file=$expResultDir/output_10best.txt
+    output_file=$expResultDir/output.txt
 
     python generate_result.py -s $test_source_file -t $test_target_file -o $output_file -r $resultTempDir --knmt
 elif [ "$type" = "LM" ] ; then
