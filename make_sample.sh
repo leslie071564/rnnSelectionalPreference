@@ -19,7 +19,7 @@ gxpc e mkdir -p $parallelTmpDir
 # extract training samples from each raw file.
 task_file='./preProcess.task'
 python make_sample.py print_task --config $config_file --task_file $task_file
-gxpc js -a work_file=preProcess.task -a cpu_factor=0.5
+gxpc js -a work_file=preProcess.task -a cpu_factor=0.125
 echo "sample files extracted: $sampleTmpDir"
 rm -f $task_file
 gxpc e rm -rf $parallelTmpDir

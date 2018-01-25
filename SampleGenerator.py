@@ -9,16 +9,20 @@ class PASextractor(object):
         self.config = exp_settings
 
     def processLine(self, line):
-        line = line.split()
-        sid, rawPred, rawArgs = line[0], line[1], line[2:]
+        sid, PAs = line.split(" ", 1)
 
-        pred = self.processPredicate(rawPred)
-        args = self.processArguments(rawArgs)
+        pa_elements = []
+        for PA in PAs.split("#"):
+            rawPred, rawArgs = PA.split(" ", 1)
+            pred = self.processPredicate(rawPred)
+            args = self.processArguments(rawArgs)
 
-        if pred == None or args == None:
-            return None
+            if pred == None or args == None:
+                continue
+            pa_elements.append([pred, args])
+
+        return pa_elements
         
-        return sid, pred, args
 
     def processPredicate(self, rawPred):
         pred, predType = rawPred.split(":")
@@ -48,6 +52,7 @@ class PASextractor(object):
         return True
 
     def processArguments(self, args):
+        args = args.split(" ")
         try:
             args = [[arg.split(';')[0], case.split(u'格')[0]] for arg, case in map(lambda x: x.split(":"), args)]
         except ValueError:
@@ -65,29 +70,51 @@ class PASextractor(object):
 
         return args
 
+    def get_pa_rep(self, pa):
+        pred, args = pa
+        args = ["%s %s" % (arg, case) for arg, case in args]
+        return "%s %s".lstrip() % (" ".join(args), pred)
+
+    def get_pa_training_instance(self, pa):
+        pred, args = pa
+        args = ["%s %s" % (arg, case) for arg, case in args]
+        training_instances = []
+        for index, arg in enumerate(args):
+            arg, case = arg.split()
+            src_args = " ".join(arg for arg_index, arg in enumerate(args) if arg_index != index)
+            src = "%s %s %s" % (src_args, pred, case)
+            tgt = arg
+            training_instances.append([src.lstrip(), tgt])
+        return training_instances
+
 
 class SampleGenerator(PASextractor):
     def __init__(self, exp_settings):
         PASextractor.__init__(self, exp_settings)
 
     def getMTSample(self, line):
-        line = self.processLine(line)
-        if line == None:
+        pas = self.processLine(line)
+        if pas == []:
             return []
-        sid, pred, args = line
 
         # create training instances.
         training_instances = []
-        for index, arg in enumerate(args):
-            arg, case = arg
+        for index, this_pa in enumerate(pas):
+            other_pas = " END ".join(self.get_pa_rep(pa) for pa_index, pa in enumerate(pas) if pa_index != index)
+            pred, args = this_pa
 
-            src = sum(args[:index], []) + sum(args[index + 1:], [])
-            src = "%s %s %s" % (" ".join(src), pred, case)
-            src = src.lstrip()
-            tgt = arg
-            training_instances.append([src, tgt])
+            pa_training_instances = self.get_pa_training_instance(this_pa)
+            if other_pas == "":
+                training_instances += pa_training_instances
+            else:
+                training_instances += [ ["%s END %s" % (other_pas, src), tgt] for src, tgt in pa_training_instances]
 
         return training_instances
+
+    def getREP(self, line):
+        pas = self.processLine(line)
+        reps = [self.get_pa_rep(pa) for pa in pas]
+        return reps
 
     def printSample(self, raw_file, output_file):
         if self.config.type == 'MT':
@@ -95,6 +122,20 @@ class SampleGenerator(PASextractor):
 
         elif self.config.type == 'LM':
             self.printLMSample(raw_file, output_file)
+
+        elif self.config.type == 'REP':
+            self.print_sample_representation_str(raw_file, output_file)
+
+    def print_sample_representation_str(self, raw_file, output_file):
+        output_file = codecs.open(output_file, 'w', 'utf-8')
+
+        with open(raw_file) as f:
+            for line in f:
+                line = line.decode('euc-jp').rstrip()
+                sid = line.split()[0]
+                reps = self.getREP(line)
+                for rep in reps:
+                    output_file.write("%s###%s\n" % (rep, sid))
 
     def printMTSample(self, raw_file, output_file):
         output_file = codecs.open(output_file, 'w', 'utf-8')
