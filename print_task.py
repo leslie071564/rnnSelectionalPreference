@@ -20,6 +20,7 @@ def getPrintTaskOptions(options):
     options.rawPrefix = config['ExpLocation']['rawPrefix']
     options.sampleTmpDir = config['ExpLocation']['sampleTmpDir'] 
     options.parallelTmpDir = config['ExpLocation']['parallelTmpDir'] 
+    options.type = config['ExpSetting']['type']
 
 def printTaskFile(options):
     getPrintTaskOptions(options)
@@ -37,7 +38,11 @@ def printTaskFile(options):
         sampleTmpFile = "%s/%s" % (options.sampleTmpDir, fileID)
 
         extract_cmd = "python make_sample.py extract_sample %s --output_file %s --config %s" % (rawFile, parallelTmpFile, options.config_file)
-        sort_cmd = "nice -n 19 sort -u -o %s %s" % (sampleTmpFile, parallelTmpFile)
+        if options.type == 'REP':
+            sort_cmd = "nice -n 19 sort -o %s %s" % (parallelTmpFile, parallelTmpFile)
+            sort_cmd = "%s && python ./merge.py %s %s" % (sort_cmd, parallelTmpFile, sampleTmpFile)
+        else:
+            sort_cmd = "nice -n 19 sort -u -o %s %s" % (sampleTmpFile, parallelTmpFile)
         echo_cmd = "echo %s done" % fileID
         cmd = " && ".join([extract_cmd, sort_cmd, echo_cmd])
 
