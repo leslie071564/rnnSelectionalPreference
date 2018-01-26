@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import sys
-import argparse
 from collections import defaultdict
 from itertools import izip
 import utils
 KATA_CASE = [x.encode('utf-8') for x in [u'ガ', u"ヲ", u"ニ", u"デ", u"未"]]
+from getSentence import getEventSentences
 
 class knmtResultExtractor(object):
     def __init__(self, sourceFile, targetFile, outputFile):
+        self.sentenceExtractor = getEventSentences()
         self._setResultData(sourceFile, targetFile, outputFile)
 
     def _setResultData(self, sourceFile, targetFile, outputFile):
@@ -33,7 +34,6 @@ class knmtResultExtractor(object):
             srcStructure.append(this_src)
 
         return srcStructure
-
 
     def _process_src(self, raw_src, detect_target_case=False):
         src_dic = {}
@@ -87,9 +87,11 @@ class knmtResultExtractor(object):
         row_data = {}
         # source-related
         source_struc = index_data['s']
-        row_data['source_rep'] = self._get_source_str(index_data['s'])
+        row_data['source_rep'] = self._get_source_str(source_struc)
+
         pred_list = [src_dic['pred'] for src_dic in source_struc]
         row_data['pred_list'] = utils.encode_list(pred_list)
+
         arg_list = self._get_arg_list(source_struc)
         row_data['arg_list'] = utils.encode_list(arg_list)
 
@@ -98,14 +100,31 @@ class knmtResultExtractor(object):
         row_data['output_list'] = utils.encode_list(index_data['o'])
 
         # target-related
-        row_data['target_arg'] = index_data['t']
+        target_arg = index_data['t']
+        row_data['target_arg'] = target_arg
         row_data['target_case'] = source_struc[-1]['tgt']
         row_data['target_pred'] = source_struc[-1]['pred']
 
         # other attributes
+        rep_strs = self._get_rep_strs(source_struc, target_arg)
+        sents = self.sentenceExtractor.events_to_sentence(rep_strs)
+        row_data['raw_sents'] = encode_list(sents)
 
         row_data = {k: v.decode('utf-8') for k, v in row_data.iteritems()}
         return row_data
+
+    def _get_rep_strs(self, src_struc, target_arg):
+        rep_strs = []
+        for src_dic in src_struc:
+            pred = src_dic['pred']
+            args = [ [arg, case] for case, arg in src_dic.items() if case not in ['pred', 'tgt'] ]
+            if 'tgt' in src_dic:
+                args.append([target_arg, src_dic['tgt']])
+
+            rep_str = utils.getPAstr(args, pred)
+            rep_strs.append(rep_str)
+
+        return rep_strs
 
     def _get_source_str(self, srcStructure):
         strs = []

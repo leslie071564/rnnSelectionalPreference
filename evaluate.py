@@ -8,7 +8,6 @@ def get_result_db_cursor(db_loc):
     engine = create_engine('sqlite:///%s' % db_loc, echo=False)
     metadata = MetaData(engine)
 
-
     result_table = Table('overview', metadata, 
                          Column("source_rep", String()), 
                          Column("arg_list", String()), 
@@ -16,7 +15,8 @@ def get_result_db_cursor(db_loc):
                          Column("output_list", String()), 
                          Column("target_arg", String()), 
                          Column("target_case", String()), 
-                         Column("target_pred", String()) ) 
+                         Column("target_pred", String()),
+                         Column("raw_sents", String()) )
 
     result_table.create()
     insert_cursor = result_table.insert()
