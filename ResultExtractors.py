@@ -4,11 +4,11 @@ from collections import defaultdict
 from itertools import izip
 import utils
 KATA_CASE = [x.encode('utf-8') for x in [u'ガ', u"ヲ", u"ニ", u"デ", u"未"]]
-from getSentence import getEventSentences
+from getSentence import SentenceExtractor
 
 class knmtResultExtractor(object):
     def __init__(self, sourceFile, targetFile, outputFile):
-        self.sentenceExtractor = getEventSentences()
+        self.sentenceExtractor = SentenceExtractor()
         self._setResultData(sourceFile, targetFile, outputFile)
 
     def _setResultData(self, sourceFile, targetFile, outputFile):
