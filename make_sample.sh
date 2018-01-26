@@ -1,5 +1,6 @@
 #!/bin/sh
 NICE="nice -n 19"
+export LC_ALL=C
 
 rawPrefix=$1
 sampleDir=$2

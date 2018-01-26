@@ -5,7 +5,7 @@ import cdb
 from CDB_Reader import CDB_Reader
 
 class SentenceExtractor(object):
-    pa_sid_cdb = "/pear/huang/rnnSelectionalPreference/180125_rep/tmp/ev_sid.cdb.keymap"
+    pa_sid_cdb = "/pear/huang/rnnSelectionalPreference/180125_rep/ev_sid.cdb.keymap"
     sentence_cdb_dir = "/pear/share/www-uniq/v2006-2015.text-cdb"
 
     def __init__(self, pa_sid_cdb=None, sentence_cdb_dir=None):
@@ -43,7 +43,7 @@ class SentenceExtractor(object):
         return:
             sids: list of sids.
         """
-        sid_lists = [ self.pa_sid_cdb.get(key, exhaustive=True) for key in ev_list ]
+        sid_lists = [ self.pa_sid_cdb.get(key) for key in ev_list ]
 
         if None in sid_lists:
             return []
