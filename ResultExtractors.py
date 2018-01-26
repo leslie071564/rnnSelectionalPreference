@@ -108,7 +108,7 @@ class knmtResultExtractor(object):
         # other attributes
         rep_strs = self._get_rep_strs(source_struc, target_arg)
         sents = self.sentenceExtractor.events_to_sentence(rep_strs)
-        row_data['raw_sents'] = encode_list(sents)
+        row_data['raw_sents'] = "<br>".join(sents)
 
         row_data = {k: v.decode('utf-8') for k, v in row_data.iteritems()}
         return row_data
