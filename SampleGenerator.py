@@ -92,6 +92,26 @@ class SampleGenerator(PASextractor):
     def __init__(self, exp_settings):
         PASextractor.__init__(self, exp_settings)
 
+    def printSample(self, raw_file, output_file):
+        if self.config.type == 'MT':
+            self.printMTSample(raw_file, output_file)
+
+        elif self.config.type == 'LM':
+            self.printLMSample(raw_file, output_file)
+
+        elif self.config.type == 'REP':
+            self.printSampleRepStr(raw_file, output_file)
+
+    def printMTSample(self, raw_file, output_file):
+        output_file = codecs.open(output_file, 'w', 'utf-8')
+
+        with open(raw_file) as f:
+            for line in f:
+                line = line.decode('euc-jp').rstrip()
+                training_instances = self.getMTSample(line)
+                for src, tgt in training_instances:
+                    output_file.write("%s###%s\n" % (src, tgt))
+
     def getMTSample(self, line):
         pas = self.processLine(line)
         if pas == []:
@@ -111,41 +131,16 @@ class SampleGenerator(PASextractor):
 
         return training_instances
 
-    def getREP(self, line):
-        pas = self.processLine(line)
-        reps = [self.get_pa_rep(pa) for pa in pas]
-        return reps
-
-    def printSample(self, raw_file, output_file):
-        if self.config.type == 'MT':
-            self.printMTSample(raw_file, output_file)
-
-        elif self.config.type == 'LM':
-            self.printLMSample(raw_file, output_file)
-
-        elif self.config.type == 'REP':
-            self.print_sample_representation_str(raw_file, output_file)
-
-    def print_sample_representation_str(self, raw_file, output_file):
+    def printLMSample(self, raw_file, output_file):
         output_file = codecs.open(output_file, 'w', 'utf-8')
 
         with open(raw_file) as f:
             for line in f:
                 line = line.decode('euc-jp').rstrip()
-                sid = line.split()[0]
-                reps = self.getREP(line)
-                for rep in reps:
-                    output_file.write("%s###%s\n" % (rep, sid))
-
-    def printMTSample(self, raw_file, output_file):
-        output_file = codecs.open(output_file, 'w', 'utf-8')
-
-        with open(raw_file) as f:
-            for line in f:
-                line = line.decode('euc-jp').rstrip()
-                training_instances = self.getMTSample(line)
-                for src, tgt in training_instances:
-                    output_file.write("%s###%s\n" % (src, tgt))
+                training_instances = self.getLMSample(line)
+                if training_instances == "":
+                    continue
+                output_file.write("%s\n" % training_instances)
 
     def getLMSample(self, line): 
         line = self.processLine(line)
@@ -161,54 +156,15 @@ class SampleGenerator(PASextractor):
 
         return sent
 
-    def printLMSample(self, raw_file, output_file):
+    def printSampleRepStr(self, raw_file, output_file):
         output_file = codecs.open(output_file, 'w', 'utf-8')
 
         with open(raw_file) as f:
             for line in f:
                 line = line.decode('euc-jp').rstrip()
-                training_instances = self.getLMSample(line)
-                if training_instances == "":
-                    continue
-                output_file.write("%s\n" % training_instances)
+                sid = line.split()[0]
 
-
-class RepStrGenerator(PASextractor):
-    def __init__(self, exp_settings):
-        PASextractor.__init__(self, exp_settings)
-
-    def getRepStr(self, line):
-        line = self.processLine(line)
-        if line == None:
-            return None
-        sid, pred, args = line
-        repStr = getPAstr(args, pred)
-
-        return "%s#%s" % (repStr, sid)
-
-    def printRepFile(self, raw_file, output_file):
-        output_file = codecs.open(output_file, 'w', 'utf-8')
-
-        with open(raw_file) as f:
-            for line in f:
-                line = line.decode('euc-jp').rstrip()
-                repStr = self.getRepStr(line)
-                if repStr:
-                    output_file.write("%s\n" % repStr)
-
-    def mergeRepFile(self, processed_file, merged_file):
-        merged_file = open(merged_file, 'w')
-
-        with open(processed_file) as f:
-            nowRepStr, sidList = None, []
-            for line in f:
-                repStr, sid = line.rstrip().split('#')
-                if nowRepStr == None:
-                    nowRepStr = repStr
-
-                if repStr == nowRepStr:
-                    sidList.append(sid)
-                else:
-                    merged_file.write("%s#%s\n" % (nowRepStr, ";".join(sidList)))
-                    nowRepStr, sidList = repStr, [sid]
+                for pred, args in self.processLine(line):
+                    rep = getPAstr(args, pred)
+                    output_file.write("%s###%s\n" % (rep, sid))
 
