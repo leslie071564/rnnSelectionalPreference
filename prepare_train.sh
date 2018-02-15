@@ -3,40 +3,83 @@ NICE="nice -n 19"
 
 sampleFile=$1
 expDir=$2
-config_file=$expDir/train_config.yaml
+
+## get options from config file.
 mkdir -p $expDir
+python prepare_train_config.py "$@"
+config_file=$expDir/train_config.yaml
 
-python prepare_train_config.py "$@" --config $config_file
-
-# get options
+# experiment directories and mkdir.
+trainingGraph=`cat $config_file | shyaml get-value ExpLocation.trainingGraph`
 expDataDir=`cat $config_file | shyaml get-value ExpLocation.expDataDir`
 expTrainDir=`cat $config_file | shyaml get-value ExpLocation.expTrainDir`
 expResultDir=`cat $config_file | shyaml get-value ExpLocation.expResultDir`
 mkdir -p $expDataDir $expTrainDir $expResultDir
 
+# other options.
 type=`cat $config_file | shyaml get-value ExpSetting.type`
+
+tgtVocSize=`cat $config_file | shyaml get-value ExpSetting.tgtVoc`
+srcVocSize=`cat $config_file | shyaml get-value ExpSetting.srcVoc`
 
 devSize=`cat $config_file | shyaml get-value ExpSetting.devSize`
 testSize=`cat $config_file | shyaml get-value ExpSetting.testSize`
-trainFrac=`cat $config_file | shyaml get-value ExpSetting.trainFraction`
-devNum=$(( devSize + 1 ))
-testNum=$(( devSize + testSize + 1 ))
-trainFrac=$((trainFrac))
+trainSize=`cat $config_file | shyaml get-value ExpSetting.trainSize`
+trainNum=$(( devSize + testSize + trainSize ))
+
+
+## shuffle and extract portion of training samples into $expSampleFile.
 
 # shuffle
+echo "shuffling"
 expSampleFile=$expDataDir/all.txt
 shuf $sampleFile --output=$expSampleFile
 
-# take fractions.
-if [ $trainFrac -ne 1 ];then
-    echo "take one out of $trainFrac"
-    tmp=$expDataDir/tmp.txt
-    awk "NR % $trainFrac == 0" $expSampleFile > $tmp
-    mv $tmp $expSampleFile
-fi
+# contraint on length of line.
+tmpFile=$expSampleFile.tmp
+awk 'NF<=100' $expSampleFile > $tmpFile
+mv $tmpFile $expSampleFile
 
-# split file
+# get the portion of data for training.
+echo "extrating training samples: $trainNum"
+trainNum=$(( devSize + testSize + trainSize ))
+tmpFile=$expSampleFile.tmp
+head -n $trainNum $expSampleFile > $tmpFile
+mv $tmpFile $expSampleFile
+
+
+## remove samples which have UNK in the target side.
+
+# generate list of frequent target words.
+tgtCountFile=$expDataDir/tgt_counts.txt
+frequentTgtFile=$expDataDir/tgt_frequent.txt
+
+echo "counting target-side word frequencies"
+awk -F'###' '{count[$2]++} END {for (word in count) print word, count[word]}' $expSampleFile > $tgtCountFile
+sort -nr -k2,2 $tgtCountFile -o $tgtCountFile
+head -n $tgtVocSize $tgtCountFile > $frequentTgtFile
+
+#remove samples with non-frequent words on the target side.
+filteredSampleFile=$expDataDir/all_without_unk.txt
+python ./remove_unk_tgt.py $expDataDir > $filteredSampleFile
+mv $filteredSampleFile $expSampleFile
+echo "filtered samples with UNK"
+
+# celan-up.
+# rm -f $tgtCountFile $frequentTgtFile
+
+
+## split file and output commands.
+devNum=$(( devSize + 1 ))
+testNum=$(( devSize + testSize + 1 ))
+
 if [ "$type" = "MT" ] ; then
+    # seperate samples into dev/test/train sets.
+    csplit -f $expDataDir/sample $expSampleFile $devNum $testNum
+    devSet=$expDataDir/sample00
+    testSet=$expDataDir/sample01
+    trainSet=$expDataDir/sample02
+
     # seperate the sampel into dev/test/train sets.
     srcDev=$expDataDir/source_dev.txt
     srcTest=$expDataDir/source_test.txt
@@ -45,22 +88,26 @@ if [ "$type" = "MT" ] ; then
     tgtTest=$expDataDir/target_test.txt
     tgtTrain=$expDataDir/target_train.txt
 
-    csplit $expSampleFile $devNum $testNum
-    $NICE awk -F"###" '{print $1 > "'"$srcDev"'"; print $2 > "'"$tgtDev"'"}' xx00
-    $NICE awk -F"###" '{print $1 > "'"$srcTest"'"; print $2 > "'"$tgtTest"'"}' xx01
-    $NICE awk -F"###" '{print $1 > "'"$srcTrain"'"; print $2 > "'"$tgtTrain"'"}' xx02
-    rm -f xx*
+    $NICE awk -F"###" '{print $1 > "'"$srcDev"'"; print $2 > "'"$tgtDev"'"}' $devSet
+    $NICE awk -F"###" '{print $1 > "'"$srcTest"'"; print $2 > "'"$tgtTest"'"}' $testSet
+    $NICE awk -F"###" '{print $1 > "'"$srcTrain"'"; print $2 > "'"$tgtTrain"'"}' $trainSet
+
+    rm -f $devSet $testSet $trainSet
 
     # print commands.
     dataPrefix=$expTrainDir/knmt_data
     trainPrefix=$expTrainDir/knmt_train
 
-    cmd="knmt make_data $srcTrain $tgtTrain $dataPrefix --dev_src $srcDev --dev_tgt $tgtDev --test_src $srcTest --test_tgt $tgtTest"
+    cmd="knmt make_data $srcTrain $tgtTrain $dataPrefix --dev_src $srcDev --dev_tgt $tgtDev --test_src $srcTest --test_tgt $tgtTest --src_voc_size $srcVocSize --tgt_voc_size $tgtVocSize"
     echo "***** Run the following command to make data for knmt processing:"
     echo $cmd
 
     cmd="knmt train $dataPrefix $trainPrefix --mb_size 512 --gpu GPU"
     echo "***** Run the following command to train knmt model (substitute GPU to the real number of GPU):"
+    echo $cmd
+
+    cmd="knmt utils graph $trainPrefix.result.sqlite $trainingGraph"
+    echo "***** Run the following command to output training graph:"
     echo $cmd
 
     model=$trainPrefix.model.best_loss.npz
@@ -73,24 +120,24 @@ if [ "$type" = "MT" ] ; then
         
 elif [ "$type" = "LM" ] ; then
     # seperate the sampel into test/train sets.
-    pcdDev=$expDataDir/dev.txt
-    pcdTest=$expDataDir/test.txt
-    pcdTrain=$expDataDir/train.txt
+    csplit -f $expDataDir/sample $expSampleFile $devNum $testNum
 
-    csplit $expSampleFile $devNum $testNum
-    mv xx00 $pcdDev
-    mv xx01 $pcdTest
-    mv xx02 $pcdTrain
+    devSample=$expDataDir/dev.txt
+    testSample=$expDataDir/test.txt
+    trainSample=$expDataDir/train.txt
+    mv $expDataDir/sample00 $devSample
+    mv $expDataDir/sample01 $testSample
+    mv $expDataDir/sample02 $trainSample
 
     # print commands.
     model_name=$expTrainDir/rnnlm.mdl
     output_file=$expResultDir/output.txt
 
-    cmd="./rnnlm -rnnlm $model_name -train $pcdTrain -valid $pcdDev --nce 22 --hidden 100 --direct 100 --direct-order 3 -bptt 4 --use-cuda 1"
+    cmd="./rnnlm -rnnlm $model_name -train $trainSample -valid $devSample --nce 22 --hidden 100 --direct 100 --direct-order 3 -bptt 4 --use-cuda 1"
     echo "***** Run the following command to train RNNLM model:"
     echo $cmd
 
-    cmd="./rnnlm -rnnlm $model_name --test $pcdTest --nce-accurate-test 1 --use-cuda 0 > $output_file"
+    cmd="./rnnlm -rnnlm $model_name --test $testSample --nce-accurate-test 1 --use-cuda 0 > $output_file"
     echo "***** Run the following command to prepare output (10-best) file:"
     echo $cmd
 fi
