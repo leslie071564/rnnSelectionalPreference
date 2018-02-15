@@ -30,21 +30,17 @@ trainNum=$(( devSize + testSize + trainSize ))
 
 ## shuffle and extract portion of training samples into $expSampleFile.
 
-# shuffle
-echo "shuffling"
+# shuffle and get the portion of data for training.
+echo "shuffling ..."
 expSampleFile=$expDataDir/all.txt
-shuf $sampleFile --output=$expSampleFile
+trainNum=$(( devSize + testSize + trainSize ))
+shuf $sampleFile -n $trainNum --output=$expSampleFile
+echo "$trainNum training samples extracted."
 
 # contraint on length of line.
+echo "filtering out too-long training samples ..."
 tmpFile=$expSampleFile.tmp
 awk 'NF<=100' $expSampleFile > $tmpFile
-mv $tmpFile $expSampleFile
-
-# get the portion of data for training.
-echo "extrating training samples: $trainNum"
-trainNum=$(( devSize + testSize + trainSize ))
-tmpFile=$expSampleFile.tmp
-head -n $trainNum $expSampleFile > $tmpFile
 mv $tmpFile $expSampleFile
 
 
