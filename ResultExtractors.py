@@ -74,6 +74,17 @@ class knmtResultExtractor(object):
         # last index
         self.resultData[index]['o'] = out_args
 
+    def eval_by_top10(self):
+        hit = 0
+        test_size = len(self.resultData)
+        for index, index_data in self.resultData.iteritems():
+            target_arg = index_data['t']
+            output_list = index_data['o']
+            if target_arg in output_list:
+                hit += 1
+
+        print "top-10 precision: %s / %s" % (hit, test_size)
+
     def export_result(self, result_db_cursor):
         for index in self.resultData:
             row_data = self.convert_result_data(index)
@@ -107,8 +118,12 @@ class knmtResultExtractor(object):
 
         # other attributes
         rep_strs = self._get_rep_strs(source_struc, target_arg)
-        sents = self.sentenceExtractor.events_to_sentence(rep_strs)
-        row_data['raw_sents'] = "<br>".join(sents)
+        if target_arg == 'INTRANS':
+            row_data['raw_sents'] = ""
+            sys.stderr.write('INTRANS\n')
+        else:
+            sents = self.sentenceExtractor.events_to_sentence(rep_strs)
+            row_data['raw_sents'] = "<br>".join(sents)
 
         row_data = {k: v.decode('utf-8') for k, v in row_data.iteritems()}
         return row_data

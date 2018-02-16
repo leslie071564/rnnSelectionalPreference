@@ -14,7 +14,7 @@ if [ "$type" = "MT" ] ; then
     output_file=$expResultDir/output.txt
     result_db_loc=$expResultDir/result.sqlite
 
-    python evaluate.py -s $test_source_file -t $test_target_file -o $output_file -r $result_db_loc --knmt
+    python evaluate.py -s $test_source_file -t $test_target_file -o $output_file -r $result_db_loc --knmt "${@:2}"
 elif [ "$type" = "LM" ] ; then
     test_file=$expDataDir/test.txt
     output_file=$expResultDir/output.txt

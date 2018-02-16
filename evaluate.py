@@ -32,16 +32,24 @@ if __name__ == "__main__":
 
     parser.add_argument("--rnnlm", action="store_true", dest="rnnlm")
     parser.add_argument("--knmt", action="store_true", dest="knmt")
+
+    parser.add_argument("--top_10_eval", action="store_true", dest="top_10_eval")
     options = parser.parse_args() 
 
     if options.knmt:
-        x = knmtResultExtractor(options.source_file, options.target_file, options.output_file)
-        result_db_cursor = get_result_db_cursor(options.result_db)
-
-        row_data = x.export_result(result_db_cursor)
+        result_extractor = knmtResultExtractor(options.source_file, options.target_file, options.output_file)
 
     elif options.rnnlm:
-        x = rnnlmResultExtractor(options.source_file, options.output_file)
+        result_extractor = rnnlmResultExtractor(options.source_file, options.output_file)
 
-        sys.stderr.write("evaluation script of rnnlm-model is not written yet.\n")
+    else:
+        sys.stderr.write("please specify type of experiment. (knmt/rnnlm)\n")
+        sys.exit()
+
+    if options.top_10_eval:
+        result_extractor.eval_by_top10()
+
+    else:
+        result_db_cursor = get_result_db_cursor(options.result_db)
+        row_data = result_extractor.export_result(result_db_cursor)
 
