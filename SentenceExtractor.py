@@ -26,7 +26,7 @@ class SentenceExtractor(object):
         sids = self.events_to_sids(ev_list)
 
         sents = []
-        for sid in sids:
+        for sid in sids[:10]:
             sent = self.sid_to_sentence(sid)
             if sent == None:
                 sys.stderr.write("Sentence not found: %s\n" % sid)
@@ -51,7 +51,7 @@ class SentenceExtractor(object):
         sid_lists = [ set(sids.split(';')) for sids in sid_lists ]
         sids = set.intersection(*sid_lists)
 
-        return sids
+        return list(sids)
 
     def sid_to_sentence(self, sid):
         sid = sid.split(':')[-1]
