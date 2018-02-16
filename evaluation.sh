@@ -17,7 +17,7 @@ if [ "$type" = "MT" ] ; then
     python evaluate.py -s $test_source_file -t $test_target_file -o $output_file -r $result_db_loc --knmt
 elif [ "$type" = "LM" ] ; then
     test_file=$expDataDir/test.txt
-    output_file=$expResultDir/output_10best.txt
+    output_file=$expResultDir/output.txt
     result_db_loc=$expResultDir/result.sqlite
 
     python evaluate.py -s $test_file -o $output_file -r $result_db_loc --rnnlm
