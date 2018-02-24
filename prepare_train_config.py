@@ -11,12 +11,14 @@ def setArgs(parser):
     parser.add_argument('--config_file', action='store', dest="config_file")
     parser.add_argument('--training_graph', action='store', dest='trainingGraph')
 
-    parser.add_argument('-t', '--test_size', action='store', type=int, default=10000, dest='testSize')
-    parser.add_argument('-d', '--dev_size', action='store', type=int, default=10000, dest='devSize')
-    parser.add_argument('-e', '--train_size', action='store', type=int, default=100000000, dest='trainSize')
+    parser.add_argument('--test_size', action='store', type=int, default=10000, dest='testSize')
+    parser.add_argument('--dev_size', action='store', type=int, default=10000, dest='devSize')
+    parser.add_argument('--train_size', action='store', type=int, default=100000000, dest='trainSize')
 
     parser.add_argument('--src_voc_size', action='store', type=int, default=32000, dest='srcVoc')
     parser.add_argument('--tgt_voc_size', action='store', type=int, default=32000, dest='tgtVoc')
+
+    parser.add_argument('--filter_unk', action='store_true', dest='UNKfilter')
 
 def completeOptions(options):
     if options.trainingGraph == None:
@@ -41,7 +43,7 @@ def writeConfig(options):
     dataLocs = ['sampleFile', 'sampleConfig', 'expDir', 'expDataDir', 'expTrainDir', 'expResultDir', 'trainingGraph']
     dataLocs = dict((arg, getattr(options, arg)) for arg in dataLocs)
 
-    expSettings = ['type', 'testSize', 'devSize', 'trainSize', 'srcVoc', 'tgtVoc']
+    expSettings = ['type', 'testSize', 'devSize', 'trainSize', 'srcVoc', 'tgtVoc', 'UNKfilter']
     expSettings = dict((arg, getattr(options, arg)) for arg in expSettings)
 
     allArgs = {'ExpLocation' : dataLocs, 'ExpSetting' : expSettings}

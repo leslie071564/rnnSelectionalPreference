@@ -18,6 +18,7 @@ mkdir -p $expDataDir $expTrainDir $expResultDir
 
 # other options.
 type=`cat $config_file | shyaml get-value ExpSetting.type`
+UNKfilter=`cat $config_file | shyaml get-value ExpSetting.UNKfilter`
 
 tgtVocSize=`cat $config_file | shyaml get-value ExpSetting.tgtVoc`
 srcVocSize=`cat $config_file | shyaml get-value ExpSetting.srcVoc`
@@ -25,7 +26,6 @@ srcVocSize=`cat $config_file | shyaml get-value ExpSetting.srcVoc`
 devSize=`cat $config_file | shyaml get-value ExpSetting.devSize`
 testSize=`cat $config_file | shyaml get-value ExpSetting.testSize`
 trainSize=`cat $config_file | shyaml get-value ExpSetting.trainSize`
-trainNum=$(( devSize + testSize + trainSize ))
 
 
 ## shuffle and extract portion of training samples into $expSampleFile.
@@ -35,7 +35,6 @@ echo "shuffling ..."
 expSampleFile=$expDataDir/all.txt
 trainNum=$(( devSize + testSize + trainSize ))
 shuf $sampleFile -n $trainNum --output=$expSampleFile
-echo "$trainNum training samples extracted."
 
 # contraint on length of line.
 echo "filtering out too-long training samples ..."
@@ -45,33 +44,32 @@ mv $tmpFile $expSampleFile
 
 
 ## remove samples which have UNK in the target side.
+if [ "$UNKfilter" = "True" ] ;
+then
+    # generate list of frequent target words.
+    tgtCountFile=$expDataDir/tgt_counts.txt
+    frequentTgtFile=$expDataDir/tgt_frequent.txt
 
-# generate list of frequent target words.
-tgtCountFile=$expDataDir/tgt_counts.txt
-frequentTgtFile=$expDataDir/tgt_frequent.txt
+    echo "counting target-side word frequencies"
+    awk -F'###' '{count[$2]++} END {for (word in count) print word, count[word]}' $expSampleFile > $tgtCountFile
+    sort -nr -k2,2 $tgtCountFile -o $tgtCountFile
+    head -n $tgtVocSize $tgtCountFile > $frequentTgtFile
 
-echo "counting target-side word frequencies"
-awk -F'###' '{count[$2]++} END {for (word in count) print word, count[word]}' $expSampleFile > $tgtCountFile
-sort -nr -k2,2 $tgtCountFile -o $tgtCountFile
-head -n $tgtVocSize $tgtCountFile > $frequentTgtFile
+    #remove samples with non-frequent words on the target side.
+    filteredSampleFile=$expDataDir/all_without_unk.txt
+    python ./remove_unk_tgt.py $expDataDir > $filteredSampleFile
+    mv $filteredSampleFile $expSampleFile
+    echo "filtered samples with UNK"
 
-#remove samples with non-frequent words on the target side.
-filteredSampleFile=$expDataDir/all_without_unk.txt
-python ./remove_unk_tgt.py $expDataDir > $filteredSampleFile
-mv $filteredSampleFile $expSampleFile
-echo "filtered samples with UNK"
-
-# celan-up.
-# rm -f $tgtCountFile $frequentTgtFile
+fi
 
 
 ## split file and output commands.
-devNum=$(( devSize + 1 ))
-testNum=$(( devSize + testSize + 1 ))
 
 if [ "$type" = "MT" ] ; then
     # seperate samples into dev/test/train sets.
-    csplit -f $expDataDir/sample $expSampleFile $devNum $testNum
+    csplit -f $expDataDir/sample $expSampleFile $((devSize + 1)) $((devSize + testSize + 1))
+
     devSet=$expDataDir/sample00
     testSet=$expDataDir/sample01
     trainSet=$expDataDir/sample02
@@ -116,7 +114,7 @@ if [ "$type" = "MT" ] ; then
         
 elif [ "$type" = "LM" ] ; then
     # seperate the sampel into test/train sets.
-    csplit -f $expDataDir/sample $expSampleFile $devNum $testNum
+    csplit -f $expDataDir/sample $expSampleFile $((devSize + 1)) $((devSize + testSize + 1))
 
     devSample=$expDataDir/dev.txt
     testSample=$expDataDir/test.txt
