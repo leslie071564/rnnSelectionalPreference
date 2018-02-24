@@ -9,6 +9,7 @@ from utils import EngCases, EngPreds
 TYPES = ['MT', 'LM', 'REP']
 FORMATS = ['targetLast', 'placeHolder']
 TARGETCASES = ['main', 'all']
+INTRANS_LOC = "/pear/huang/rnnSelectionalPreference/intrans.txt"
 
 def setArgs(parser):
     parser.add_argument('rawPrefix', action='store')
@@ -17,6 +18,7 @@ def setArgs(parser):
 
     parser.add_argument('-p', '--parallelTmpDir', action='store', default='/data/$USER/tmp_rnnsp', dest='parallelTmpDir')
     parser.add_argument('-t', '--sampleTmpDir', action='store', default='$sampleDir/tmp', dest='sampleTmpDir')
+    parser.add_argument("--intrans_list_file", action='store', default=INTRANS_LOC, dest='intrans_list_file')
 
     parser.add_argument('--type', action='store', default='MT', dest='type', choices=TYPES)
     parser.add_argument('--sampleFormat', action='store', default='targetLast', dest='sampleFormat', choices=FORMATS)
@@ -27,6 +29,7 @@ def setArgs(parser):
     parser.add_argument('--splitPostfix', action='store_true', dest='splitPostfix')
     parser.add_argument('--includeTense', action='store_true', dest='includeTense')
     parser.add_argument('--onlyMultiArg', action='store_true', dest='onlyMultiArg')
+    parser.add_argument('--extractIntrans', action='store_true', dest='extractIntrans')
 
 
 def get_write_config_options(options):
@@ -49,7 +52,7 @@ def writeConfig(options):
 
     # build config_file hierarchy.
     dataLocs = dict((arg, getattr(options, arg)) for arg in ['rawPrefix', 'sampleDir', 'parallelTmpDir', 'sampleTmpDir'])
-    expSettings = dict((arg, getattr(options, arg)) for arg in ['type', 'sampleFormat', 'targetCases', 'targetPreds', 'removeHiragana', 'includePostfix', 'splitPostfix', 'includeTense', 'onlyMultiArg'])
+    expSettings = dict((arg, getattr(options, arg)) for arg in ['type', 'sampleFormat', 'targetCases', 'targetPreds', 'removeHiragana', 'includePostfix', 'splitPostfix', 'includeTense', 'onlyMultiArg', 'extractIntrans', 'intrans_list_file'])
 
     allArgs = {'ExpLocation' : dataLocs, 'ExpSetting' : expSettings}
 

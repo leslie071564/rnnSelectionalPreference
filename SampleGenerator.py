@@ -7,6 +7,7 @@ from utils import *
 class PASextractor(object):
     def __init__(self, exp_settings):
         self.config = exp_settings
+        self.intrans_list = [ pred.rstrip().decode('utf-8') for pred in open(exp_settings.intrans_list_file, 'r') ]
 
     def processLine(self, line):
         sid, PAs = line.split(" ", 1)
@@ -19,6 +20,10 @@ class PASextractor(object):
 
             if pred == None or args == None:
                 continue
+
+            if self.config.extractIntrans and rawPred in self.intrans_list:
+                args.append( ('INTRANS', u'ヲ') )
+
             pa_elements.append([pred, args])
 
         return pa_elements
@@ -72,19 +77,21 @@ class PASextractor(object):
 
     def get_pa_rep(self, pa):
         pred, args = pa
-        args = ["%s %s" % (arg, case) for arg, case in args]
+        args = ["%s %s" % (arg, case) for arg, case in args if arg != "INTRANS"]
         return "%s %s".lstrip() % (" ".join(args), pred)
 
     def get_pa_training_instance(self, pa):
         pred, args = pa
         args = ["%s %s" % (arg, case) for arg, case in args]
+
         training_instances = []
         for index, arg in enumerate(args):
             arg, case = arg.split()
-            src_args = " ".join(arg for arg_index, arg in enumerate(args) if arg_index != index)
+            src_args = " ".join(sArg for arg_index, sArg in enumerate(args) if arg_index != index and not sArg.startswith("INTRANS"))
             src = "%s %s %s" % (src_args, pred, case)
             tgt = arg
             training_instances.append([src.lstrip(), tgt])
+
         return training_instances
 
 
