@@ -1,19 +1,21 @@
-#!/bin/bash
+#/bin/bash
+
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+make_sample_script=$SCRIPTPATH/make_sample/make_sample.sh
+prepare_train_script=$SCRIPTPATH/prepare_train/prepare_train.sh
+evaluate_script=$SCRIPTPATH/evaluate.sh
 
 case $1 in
     "make_sample")
-        ./make_sample.sh "${@:2}"; 
+        $make_sample_script "${@:2}";
         ;;
     "prepare_train")
-        ./prepare_train.sh "${@:2}";
+        $prepare_train_script "${@:2}";
         ;;
     "eval")
-        ./generate_result.sh "${@:2}"
-        ;;
-    "lookup")
-        ./lookup.sh "${@:2}"
+        $evaluate_script "${@:2}";
         ;;
     *)
-        echo invalid
+        echo "invalid input-mode"
         ;;
 esac
