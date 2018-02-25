@@ -4,9 +4,13 @@ NICE="nice -n 19"
 sampleFile=$1
 expDir=$2
 
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+print_config_script=$SCRIPTPATH/prepare_train_config.py
+filter_unk_script=$SCRIPTPATH/remove_unk_tgt.py
+
 ## get options from config file.
 mkdir -p $expDir
-python prepare_train_config.py "$@"
+python $print_config_script "$@"
 config_file=$expDir/train_config.yaml
 
 # experiment directories and mkdir.
@@ -57,7 +61,7 @@ then
 
     #remove samples with non-frequent words on the target side.
     filteredSampleFile=$expDataDir/all_without_unk.txt
-    python ./remove_unk_tgt.py $expDataDir > $filteredSampleFile
+    python $filter_unk_script $expDataDir > $filteredSampleFile
     mv $filteredSampleFile $expSampleFile
     echo "filtered samples with UNK"
 
