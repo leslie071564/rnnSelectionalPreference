@@ -5,10 +5,15 @@ export LC_ALL=C
 rawPrefix=$1
 sampleDir=$2
 
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+make_sample_script=$SCRIPTPATH/make_sample.py
+merge_script=$SCRIPTPATH/merge.py
+build_db_script=$SCRIPTPATH/build_sentence_db.py
+
 # generate config file.
 mkdir -p $sampleDir
 config_file=$sampleDir/make_sample_config.yaml
-python make_sample.py print_config "$@" --config $config_file
+python $make_sample_script print_config "$@" --config $config_file
 
 # mkdir: temporary directories.
 sampleTmpDir=`cat $config_file | shyaml get-value ExpLocation.sampleTmpDir`
@@ -18,7 +23,8 @@ gxpc e mkdir -p $parallelTmpDir
 
 # extract training samples from each raw file.
 task_file='./preProcess.task'
-python make_sample.py print_task --config $config_file --task_file $task_file
+python $make_sample_script print_task --config $config_file --task_file $task_file
+echo $task_file
 gxpc js -a work_file=preProcess.task -a cpu_factor=0.125
 echo "sample files extracted in directory: $sampleTmpDir"
 
@@ -39,10 +45,10 @@ type=`cat $config_file | shyaml get-value ExpSetting.type`
 if [ "$type" = "REP" ] ; then
     $NICE sort --parallel=10 -u --temporary-directory=$sort_tmp_dir -o $sampleFile $sampleFile
     tmp_sample_file=$sampleFile.tmp
-    python ./merge.py $sampleFile $tmp_sample_file && mv $tmp_sample_file $sampleFile 
+    python $merge_script $sampleFile $tmp_sample_file && mv $tmp_sample_file $sampleFile 
 
     ev_sid_cdb_prefix=$sampleDir/ev_sid.cdb
-    python ./build_sentence_db.py -i $sampleFile -o $ev_sid_cdb_prefix
+    python $build_db_script -i $sampleFile -o $ev_sid_cdb_prefix
     echo "event-sid cdb build at: $ev_sid_cdb_prefix"
 else
     $NICE sort --parallel=10 -u --temporary-directory=$sort_tmp_dir -o $sampleFile $sampleFile

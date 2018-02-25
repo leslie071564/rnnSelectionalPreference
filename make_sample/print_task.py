@@ -25,6 +25,10 @@ def getPrintTaskOptions(options):
 def printTaskFile(options):
     getPrintTaskOptions(options)
 
+    make_data_dir = os.path.dirname(os.path.realpath(__file__))
+    extract_script = "%s/make_sample.py extract_sample" % make_data_dir
+    merge_script = "%s/merge.py" % make_data_dir
+
     raw_dir, raw_file_prefix = os.path.dirname(options.rawPrefix), os.path.basename(options.rawPrefix)
     regex = re.compile(r'\d+')
 
@@ -37,10 +41,10 @@ def printTaskFile(options):
         parallelTmpFile = "%s/%s" % (options.parallelTmpDir, fileID)
         sampleTmpFile = "%s/%s" % (options.sampleTmpDir, fileID)
 
-        extract_cmd = "python make_sample.py extract_sample %s --output_file %s --config %s" % (rawFile, parallelTmpFile, options.config_file)
+        extract_cmd = "python %s %s --output_file %s --config %s" % (extract_script, rawFile, parallelTmpFile, options.config_file)
         if options.type == 'REP':
             sort_cmd = "nice -n 19 sort -o %s %s" % (parallelTmpFile, parallelTmpFile)
-            sort_cmd = "%s && python ./merge.py %s %s" % (sort_cmd, parallelTmpFile, sampleTmpFile)
+            sort_cmd = "%s && python %s %s %s" % (sort_cmd, merge_script, parallelTmpFile, sampleTmpFile)
         else:
             sort_cmd = "nice -n 19 sort -u -o %s %s" % (sampleTmpFile, parallelTmpFile)
         echo_cmd = "echo %s done" % fileID
