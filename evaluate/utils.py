@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+JapCases = [u"ガ", u"ヲ", u"ニ", u"ト", u"デ", u"未", u"カラ", u"ヨリ", u"ヘ", u"マデ", u"修飾", u"時間", u"ガ２"]
 
 def getPAstr(args, pred):
     if type(pred) == str:
