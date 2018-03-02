@@ -11,13 +11,40 @@ preds = dict(zip(EngPreds, JapPreds))
 
 skipCategory = ['Po', 'Nd']
 
-def rmvHiragana(phr, delimiter='+'):
+def rmvHiraganaNaive(phr, delimiter='+'):
     if '?' in phr:
         phr = phr.split('?')[0]
 
     phr = phr.split(delimiter)
     phr = map(lambda x: x.split('/')[0], phr)
     return delimiter.join(phr)
+
+def rmvHiragana(phr, delimiter='+'):
+    if '?' not in phr:
+        phr = phr.split(delimiter)
+        phr = map(lambda x: x.split('/')[0], phr)
+        return delimiter.join(phr)
+
+    else:
+        first_phr = phr.split('?')[0]
+        phr_elements = first_phr.split(delimiter)
+
+        # determine keeping kanzi or hiragana parts.
+        decision_ele = None
+        for ele in phr_elements:
+            if '/' in ele:
+                decision_ele = ele
+                break
+
+        if decision_ele != None:
+            kanzi, hiragana = decision_ele.split('/')
+            k_count, h_count = phr.count(kanzi + '/'), phr.count('/' + hiragana)
+            keep_index = -1 if h_count > k_count else 0
+        else:
+            keep_index = 0
+
+        phr_elements = map(lambda x: x.split('/')[keep_index], phr_elements)
+        return delimiter.join(phr_elements)
 
 def isNumberPredicate(pred):
     # modify later? 
