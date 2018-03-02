@@ -6,8 +6,7 @@ import make_sample_config as print_config
 import print_task
 import extract_sample
 
-def main():
-    parser = argparse.ArgumentParser()
+def setArgs(parser):
     subparsers = parser.add_subparsers(dest='subtask')
 
     # generate config file.
@@ -22,6 +21,9 @@ def main():
     sample_parser = subparsers.add_parser('extract_sample')
     extract_sample.setArgs(sample_parser)
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    setArgs(parser)
     options = parser.parse_args()
 
     if options.subtask == 'print_config':
@@ -33,6 +35,3 @@ def main():
     elif options.subtask == 'extract_sample':
         extract_sample.extractSample(options)
 
-
-if __name__ == "__main__":
-    main()

@@ -3,33 +3,34 @@ import sys
 import argparse
 import codecs
 from utils import *
+import random
 
 class PASextractor(object):
     def __init__(self, exp_settings):
         self.config = exp_settings
         self.intrans_list = [ pred.rstrip().decode('utf-8') for pred in open(exp_settings.intrans_list_file, 'r') ]
 
-    def processLine(self, line):
-        sid, PAs = line.split(" ", 1)
+    def processPAS(self, pas_str):
+        """
+        extract a list of PAs embedded in pas_str.  PAS: [[pred1, args1], [pred2, args2], ...]
+        """
+        sid, PAs = pas_str.split(" ", 1)
 
-        pa_elements = []
+        PAS = []
         for PA in PAs.split("#"):
             rawPred, rawArgs = PA.split(" ", 1)
             pred = self.processPredicate(rawPred)
-            args = self.processArguments(rawArgs)
+            args = self.processArguments(rawArgs, rawPred)  # pass rawPred as argument to test for intransitivity.
 
-            if pred == None or args == None:
-                continue
+            if pred != None and args != None:   # prune PA with invalid predicate of argument.
+                PAS.append([pred, args])
 
-            if self.config.extractIntrans and rawPred in self.intrans_list:
-                args.append( ('INTRANS', u'ヲ') )
-
-            pa_elements.append([pred, args])
-
-        return pa_elements
+        return PAS
         
-
     def processPredicate(self, rawPred):
+        """
+        Take a raw predicate string and return the transfered predicate according to experiment options.
+        """
         pred, predType = rawPred.split(":")
         if not self.isValidPredicate(pred, predType):
             return None
@@ -56,14 +57,18 @@ class PASextractor(object):
 
         return True
 
-    def processArguments(self, args):
-        args = args.split(" ")
+    def processArguments(self, rawArgs, rawPred):
+        """
+        Take a raw argument string and return the transformed argument structure according to experiment options.
+        args: [(args_g, u'ガ'), (args_w, u'ヲ'), ...]
+        """
+        args = rawArgs.split(" ")
         try:
             args = [[arg.split(';')[0], case.split(u'格')[0]] for arg, case in map(lambda x: x.split(":"), args)]
+            args = filter(lambda x: x[1] in self.config.targetCases, args)
         except ValueError:
             return None
 
-        args = filter(lambda x: x[1] in self.config.targetCases, args)
         if args == []:
             return None
 
@@ -73,6 +78,10 @@ class PASextractor(object):
         if self.config.removeHiragana:
             args = map(lambda x: [rmvHiragana(x[0]), x[1]], args)
 
+        # add pseudo-word 'INTRANS' to indicate the existence of intransitive wo-case.
+        if self.config.extractIntrans and rawPred in self.intrans_list:
+            args.append( ('INTRANS', u'ヲ') )
+
         return args
 
     def get_pa_rep(self, pa):
@@ -80,7 +89,7 @@ class PASextractor(object):
         args = ["%s %s" % (arg, case) for arg, case in args if arg != "INTRANS"]
         return "%s %s".lstrip() % (" ".join(args), pred)
 
-    def get_pa_training_instance(self, pa):
+    def get_pa_training_instance(self, pa, random_pick_1=True):
         pred, args = pa
         args = ["%s %s" % (arg, case) for arg, case in args]
 
@@ -91,6 +100,9 @@ class PASextractor(object):
             src = "%s %s %s" % (src_args, pred, case)
             tgt = arg
             training_instances.append([src.lstrip(), tgt])
+
+        if random_pick_1:
+            return random.choice(training_instances)
 
         return training_instances
 
@@ -115,28 +127,21 @@ class SampleGenerator(PASextractor):
         with open(raw_file) as f:
             for line in f:
                 line = line.decode('euc-jp').rstrip()
-                training_instances = self.getMTSample(line)
-                for src, tgt in training_instances:
+
+                for src, tgt in self.getMTSample(line):
                     output_file.write("%s###%s\n" % (src, tgt))
-
+                
     def getMTSample(self, line):
-        pas = self.processLine(line)
-        if pas == []:
-            return []
+        pas = self.processPAS(line)
 
-        # create training instances.
-        training_instances = []
         for index, this_pa in enumerate(pas):
-            other_pas = " END ".join(self.get_pa_rep(pa) for pa_index, pa in enumerate(pas) if pa_index != index)
-            pred, args = this_pa
+            src, tgt = self.get_pa_training_instance(this_pa)
 
-            pa_training_instances = self.get_pa_training_instance(this_pa)
-            if other_pas == "":
-                training_instances += pa_training_instances
-            else:
-                training_instances += [ ["%s END %s" % (other_pas, src), tgt] for src, tgt in pa_training_instances]
+            context_pas = " END ".join(self.get_pa_rep(pa) for pa_index, pa in enumerate(pas) if pa_index != index)
+            if context_pas != "":
+                src = "%s END %s" % (context_pas, src)
 
-        return training_instances
+            yield (src, tgt)
 
     def printLMSample(self, raw_file, output_file):
         output_file = codecs.open(output_file, 'w', 'utf-8')
@@ -150,7 +155,7 @@ class SampleGenerator(PASextractor):
                 output_file.write("%s\n" % training_instances)
 
     def getLMSample(self, line): 
-        line = self.processLine(line)
+        line = self.processPAS(line)
         if line == None:
             return ""
         sid, pred, args = line
@@ -171,7 +176,7 @@ class SampleGenerator(PASextractor):
                 line = line.decode('euc-jp').rstrip()
                 sid = line.split()[0]
 
-                for pred, args in self.processLine(line):
+                for pred, args in self.processPAS(line):
                     rep = getPAstr(args, pred)
                     output_file.write("%s###%s\n" % (rep, sid))
 
