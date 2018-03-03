@@ -25,6 +25,9 @@ class PASextractor(object):
             if pred != None and args != None:   # prune PA with invalid predicate of argument.
                 PAS.append([pred, args])
 
+        if self.config.onlyMultiPA and len(PAS) == 1:
+            return []
+
         return PAS
         
     def processPredicate(self, rawPred):

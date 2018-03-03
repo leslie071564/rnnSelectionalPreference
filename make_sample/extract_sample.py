@@ -16,7 +16,7 @@ def getExtractConfig(config_file):
     config = yaml.load(open(config_file, 'r'))
     exp_settings = config['ExpSetting']
 
-    for opt in ['type', 'removeHiragana', 'includePostfix', 'splitPostfix', 'includeTense', 'onlyMultiArg', 'extractIntrans', 'intrans_list_file']:
+    for opt in ['type', 'removeHiragana', 'includePostfix', 'splitPostfix', 'includeTense', 'onlyMultiArg', 'onlyMultiPA', 'extractIntrans', 'intrans_list_file']:
         setattr(extract_config, opt, exp_settings[opt])
 
     if exp_settings['sampleFormat'] == 'targetLast':

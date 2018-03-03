@@ -29,6 +29,7 @@ def setArgs(parser):
     parser.add_argument('--splitPostfix', action='store_true', dest='splitPostfix')
     parser.add_argument('--includeTense', action='store_true', dest='includeTense')
     parser.add_argument('--onlyMultiArg', action='store_true', dest='onlyMultiArg')
+    parser.add_argument('--onlyMultiPA', action='store_true', dest='onlyMultiPA')
     parser.add_argument('--extractIntrans', action='store_true', dest='extractIntrans')
 
 
@@ -52,7 +53,7 @@ def writeConfig(options):
 
     # build config_file hierarchy.
     dataLocs = dict((arg, getattr(options, arg)) for arg in ['rawPrefix', 'sampleDir', 'parallelTmpDir', 'sampleTmpDir'])
-    expSettings = dict((arg, getattr(options, arg)) for arg in ['type', 'sampleFormat', 'targetCases', 'targetPreds', 'removeHiragana', 'includePostfix', 'splitPostfix', 'includeTense', 'onlyMultiArg', 'extractIntrans', 'intrans_list_file'])
+    expSettings = dict((arg, getattr(options, arg)) for arg in ['type', 'sampleFormat', 'targetCases', 'targetPreds', 'removeHiragana', 'includePostfix', 'splitPostfix', 'includeTense', 'onlyMultiArg', 'onlyMultiPA', 'extractIntrans', 'intrans_list_file'])
 
     allArgs = {'ExpLocation' : dataLocs, 'ExpSetting' : expSettings}
 
