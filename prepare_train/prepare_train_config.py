@@ -10,6 +10,7 @@ def setArgs(parser):
 
     parser.add_argument('--config_file', action='store', dest="config_file")
     parser.add_argument('--training_graph', action='store', dest='trainingGraph')
+    parser.add_argument('--result_db', action='store', dest='resultDB')
 
     parser.add_argument('--test_size', action='store', type=int, default=10000, dest='testSize')
     parser.add_argument('--dev_size', action='store', type=int, default=10000, dest='devSize')
@@ -21,9 +22,11 @@ def setArgs(parser):
     parser.add_argument('--filter_unk', action='store_true', dest='UNKfilter')
 
 def completeOptions(options):
+    exp_name = os.path.basename(options.expDir)
     if options.trainingGraph == None:
-        exp_name = os.path.basename(options.expDir)
         options.trainingGraph = "/home/huang/public_html/rnnSelectionalPreference/knmt/graph/%s.html" % (exp_name)
+    if options.resultDB == None:
+        options.resultDB = "/home/huang/public_html/rnnSelectionalPreference/knmt/result_dbs/%s.sqlite" % (exp_name)
 
     if options.config_file == None:
         options.config_file = "%s/train_config.yaml" % options.expDir
@@ -40,7 +43,7 @@ def completeOptions(options):
 def writeConfig(options):
     completeOptions(options)
 
-    dataLocs = ['sampleFile', 'sampleConfig', 'expDir', 'expDataDir', 'expTrainDir', 'expResultDir', 'trainingGraph']
+    dataLocs = ['sampleFile', 'sampleConfig', 'expDir', 'expDataDir', 'expTrainDir', 'expResultDir', 'trainingGraph', 'resultDB']
     dataLocs = dict((arg, getattr(options, arg)) for arg in dataLocs)
 
     expSettings = ['type', 'testSize', 'devSize', 'trainSize', 'srcVoc', 'tgtVoc', 'UNKfilter']
