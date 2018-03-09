@@ -9,7 +9,7 @@ from utils import EngCases, EngPreds
 TYPES = ['MT', 'LM', 'REP']
 FORMATS = ['targetLast', 'placeHolder']
 TARGETCASES = ['main', 'all']
-INTRANS_LOC = "/pear/huang/rnnSelectionalPreference/intrans.txt"
+INTRANS_LOC = "/mnt/hinoki/huang/rnnSelectionalPreference/intrans.txt"
 
 def setArgs(parser):
     parser.add_argument('rawPrefix', action='store')
