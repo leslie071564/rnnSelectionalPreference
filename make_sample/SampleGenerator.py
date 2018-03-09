@@ -131,20 +131,23 @@ class SampleGenerator(PASextractor):
             for line in f:
                 line = line.decode('euc-jp').rstrip()
 
-                for src, tgt in self.getMTSample(line):
+                sample = self.getMTSample(line)
+                if sample != None:
+                    src, tgt = sample
                     output_file.write("%s###%s\n" % (src, tgt))
                 
     def getMTSample(self, line):
         pas = self.processPAS(line)
+        if len(pas) == 0:
+            return None
 
-        for index, this_pa in enumerate(pas):
-            src, tgt = self.get_pa_training_instance(this_pa)
+        index, this_pa = random.choice(list(enumerate(pas)))
+        src, tgt = self.get_pa_training_instance(this_pa, random_pick_1=True)
 
-            context_pas = " END ".join(self.get_pa_rep(pa) for pa_index, pa in enumerate(pas) if pa_index != index)
-            if context_pas != "":
-                src = "%s END %s" % (context_pas, src)
-
-            yield (src, tgt)
+        context_pas = " END ".join(self.get_pa_rep(pa) for pa_index, pa in enumerate(pas) if pa_index != index)
+        if context_pas != "":
+            src = "%s END %s" % (context_pas, src)
+        return (src, tgt)
 
     def printLMSample(self, raw_file, output_file):
         output_file = codecs.open(output_file, 'w', 'utf-8')
